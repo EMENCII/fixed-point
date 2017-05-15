@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<head>
+<title>Metodo del punto unito</title>
+</head>
+<body>
+<div class="row">
+  <div class="col-sm-3"></div>
+  <div class="col-sm-6">
+    <p></p>
+    <h1>Metodo di risoluzione delle equazioni del punto unito</h1>
+    <br>
+    <p>
+      f(x)=(x^2)-1 => x=(x^2)+x-1 || x=-(x^2)+x+1
+    </p>
+    <p>So please convert your equation before writing it!</p>
+    <br>
+    <div class="input-group">
+      <span class="input-group-addon" id="basic-addon1">x = </span>
+      <input type="text" class="form-control" placeholder="Input your equation" id="eq">
+      <span class="input-group-btn">
+        <button class="btn btn-default" type="button" id="c">Do stuff</button>
+      </span>    
+    </div>
+    <br><div class='row'>
+      <div class="col-sm-2">
+        <input type="number" class="form-control" placeholder="a" id="a"></div>
+      <div class="col-sm-2">
+        <input type="number" class="form-control" placeholder="b" id="b"></div>
+      <p id='er'></p>
+    </div>
+  </div>
+</div>
+<div class="col-sm-1"></div>
+<div id="curve_chart" style="height: 500px"></div>
+</body>
+<script type="text/javascript" src="jQ_320.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script type="text/javascript" src="math-dev.js"></script>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script>
+  jQuery(document).ready(($) => {
+
+    $("#c").click(() => {
+      $("#er").html('')
+      var eq = $("#eq").val()
+      var a = parseFloat($("#a").val())
+      var b = parseFloat($("#b").val())
+      if(a>=b){$("#er").attr('style', 'color:red;').html("a dev'essere minore di b")}
+      else{
+        let points = [['x', eq]]
+
+        function chartPoints(){
+          let cursor = a
+          while(cursor <= b) {
+            let y = Math.round(math.eval(eq, {'x': cursor}) * 1000) / 1000
+            if(Math.abs(y) < 25)
+              points.push([Math.round(cursor * 100) / 100, y])
+            cursor = Math.round((cursor + .02) * 100) / 100
+          }
+          return points
+        }
+
+        function continuity(){
+          let cursor = a
+          let s = true
+          let p = 0
+          while(cursor<=b){
+            p = math.eval(eq, {'x': cursor})
+            if(p == Infinity || p == -Infinity){
+              s=false
+            }
+            cursor = Math.round((cursor + .02) * 100) / 100
+          }
+          return s
+        }
+
+        function xistence(){
+          if(continuity() && math.eval(eq, {'x': a}) * math.eval(eq, {'x': b}) < 0){
+            return true
+          }else{
+            return false
+          }
+        }
+
+        function moreorless(derivative){
+          let cursor = a; let success = 0; dh = derivative
+          if(math.eval(dh, {'x': cursor}) > 0) success++
+          else if(math.eval(dh, {'x': cursor}) < 0) success--
+          else
+            return false
+
+          while(cursor <= b){
+            if(math.eval(dh, {'x': cursor}) == 0 || math.eval(dh, {'x': cursor}) > 0 && success == -1 || math.eval(dh, {'x': cursor}) < 0 && success == 1){
+              return false
+            }
+            else{
+              cursor = Math.round((cursor + .02) * 100) / 100
+            }
+          }
+          return true
+        }
+        
+        function uniqueness(){
+          let d1 = math.derivative(math.parse(eq), 'x').toString()
+          let d2 = math.derivative(math.parse(d1), 'x').toString()
+          if(xistence()){
+            if(moreorless(d1) || moreorless(d2)){
+              $("#er").attr('style', 'color:black;').html("esiste un solo zero all'interno dell'intervallo")
+              return true
+            }
+          }
+        }
+
+        function approx(){
+          let x = (a+b)/2
+          for (var i = 25; i >= 0; i--) {
+            x = math.eval(eq, {'x': x})
+            console.log(x)
+          }
+        }
+
+        approx()
+
+        //chart stuff
+        google.charts.load('current', {'packages':['corechart']});
+        google.charts.setOnLoadCallback(drawChart);
+
+        function drawChart() {
+          var data = google.visualization.arrayToDataTable(chartPoints());
+
+          var options = {
+            curveType: 'function',
+            legend: { position: 'bottom' }
+          };
+
+          var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+          chart.draw(data, options);
+        }
+      }
+    });
+  });
+</script>
+</html>

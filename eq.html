@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<link rel="stylesheet" href="bootstrap.min.css" />
+<link rel="stylesheet" href="bootstrap-theme.min.css" />
+<head>
+<title>Metodo del punto unito</title>
+</head>
+<body>
+<div class="row">
+  <div class="col-sm-3"></div>
+  <div class="col-sm-6">
+    <p></p>
+    <h1>Metodo di risoluzione delle equazioni del punto unito</h1>
+    <br>
+    <div class="col-sm-10 row">
+      <div class="input-group">
+        <span class="input-group-addon" id="basic-addon1">0 = </span>
+        <input type="text" class="form-control" placeholder="Input your equation" id="eq">
+        <span class="input-group-btn">
+          <button class="btn btn-default" type="button" id="c">Do stuff</button>
+        </span>    
+      </div>
+      <br>
+      <!--div class="input-group">
+        <span class="input-group-addon" id="basic-addon1">x = </span>
+        <input type="text" class="form-control" placeholder="Convert your equation" id="eqx">
+      </div-->
+    </div>
+    <div class="col-sm-2">
+      <input type="number" class="form-control" placeholder="a" step="0.1" id="a">
+      <br>
+      <input type="number" class="form-control" placeholder="b" step="0.1" id="b">
+    </div>
+    <br>
+  </div>
+</div>
+<br>
+<div class="row">
+  <div class="col-sm-3"></div>
+  <div class='col-sm-6'>
+    <p id="res"></p>    
+  </div>
+</div>
+<div id="curve_chart" class="col-sm-6" style="height: 500px"></div>
+<div id="curve_chart1" class="col-sm-6" style="height: 500px"></div>
+</body>
+<script type="text/javascript" src="jQ_320.js"></script>
+<script type="text/javascript" src="bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script type="text/javascript" src="math-dev.js"></script>
+<script type="text/javascript" src="loader.js"></script>
+<script>
+  //dichiarare classe cursore, il cursore è un puntatore che scorre l'intervallo
+  class Cursor{
+    constructor(n){this.c = n} //costruttore, setta il valore
+    next(){this.c = Math.round((this.c + .02) * 100 ) /100;return this.c} //metodo .next(), incrementa il valore di .02
+  }
+
+  jQuery(document).ready(($) => {
+
+    $("#c").click(() => {
+      $("#res").html('') //pulire l'output
+      var a = parseFloat($("#a").val()) //parsare a float l'inizio dell'intervallo
+      var b = parseFloat($("#b").val()) //parsare a float la fine dell'intervallo
+      if(a>=b){$("#res").attr('style', 'color:red;').html("a dev'essere minore di b")} //se l'inizio sta dopo la fine dà errore
+      else{
+        //esegue la f exec
+        exec()
+        //definisce la funzione exec, principale del programma
+        function exec(){
+          let fx = $("#eq").val() //equazione scritta dall'utente
+          //let gx = $("#eqx").val()
+          let gx = fx + '+x' //equazione convertita
+          let d1 = math.derivative(math.parse(fx), 'x').toString() //derivata prima della funzione, serve per 1° unicità
+          let d2 = math.derivative(math.parse(d1), 'x').toString() //derivata seconda, serve per 2° unicità
+          let g1 = math.derivative(math.parse(gx), 'x').toString() //derivata prima della funzione convertita, serve per convergenza
+
+          //controllare che lo zero sia unico nell'intervallo eseguendo la funzione di unicità, passando la funzione e le derivate
+          if(uniqueness(fx, d1, d2)){
+            let p = g1small(g1) //ritorna il valore più basso del valore assoluto della derivata della funzione convertita (necessario per la convergenza)
+            console.log(p)
+            if(math.eval(g1, {'x': p}) == 0 || math.eval(g1, {'x': p}) >= 1){$("#res").append(' - il metodo non si potrebbe applicare, elaborando con soluzione più vicina')} //se il valore non rispetta le
+            approximation(p, gx) //calcola il punto                                                                                                                           //condizioni di convergenza si
+          }                                                                                                                                                                   //calcola il punto comunque
+          
+          //chart stuff
+          google.charts.load('current', {'packages':['corechart']});google.charts.setOnLoadCallback(drawChart);
+          function drawChart() {
+            var data = google.visualization.arrayToDataTable(chartPoints(fx));
+            var options = {title:'f(x)=0',curveType:'function',legend:{position:'bottom'}};
+            var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+            chart.draw(data, options);
+          }
+          google.charts.load('current', {'packages':['corechart']});google.charts.setOnLoadCallback(drawChart1);
+          function drawChart1() {
+            var data = google.visualization.arrayToDataTable(chartPoints(g1));
+            var options = {title:"x=g(x)",curveType:'function',legend:{position:'bottom'}};
+            var chart = new google.visualization.LineChart(document.getElementById('curve_chart1'));
+            chart.draw(data, options);
+          }
+        }
+        //unicità
+        function uniqueness(equation,derivative1,derivative2){
+          let xis = existenceOfZero(equation) //calcolare esistenza degli zeri
+          if(xis === true){ //se esiste almeno uno zero
+            if(moreorless(derivative1) || moreorless(derivative2)){ //e viene rispettato almeno uno dei teoremi di unicità
+              $("#res").attr('style', 'color:black;').html("esiste un solo zero all'interno dell'intervallo ")
+              return true
+            }else{
+              $("#res").attr('style', 'color:black;').html("esiste almeno uno zero all'interno dell'intervallo")
+              return false}
+          }
+          else if(xis === false){$("#res").attr('style', 'color:black;').html("non è rispettata l'esistenza dello zero");return false}
+          else{$("#res").attr('style', 'color:black;').html("la funzione non è continua");return false}
+        }
+        //esistenza dello zero
+        function existenceOfZero(eq){
+          if(continuity(eq)){ //se la f è continua
+            if(math.eval(eq, {'x': a}) * math.eval(eq, {'x': b}) <= 0){ //e agli estremi ha segno opposto, esiste
+              return true
+            }else{ //se no no
+              return false
+            }
+          }else{return 'nc'} //non è continua
+        }
+        //continuità
+        function continuity(eq){
+          let c = new Cursor(a)
+          let p = 0
+          while(c.c<=b){ //scorrere il cursore fino alla fine dell'intervallo
+            p = math.eval(eq, {'x': c.c})
+            if(p == Infinity || p == -Infinity || typeof p === 'object'){ //se fx vale infinito o non dà risultato, non è continua
+              return false
+            }
+            c.next()
+          }
+          return true //se dà sempre risultato, è continua
+        }
+        //studio delle derivate
+        function moreorless(derivative){
+          let c = new Cursor(a); let sign; let dh = derivative
+            if(math.eval(dh, {'x': c.c}) > 0) sign='+' //se la derivata in a è positiva il segno è +
+            else if(math.eval(dh, {'x': c.c}) < 0) sign='-' //se negativa è -
+            else{c.next(); if(math.eval(dh, {'x': c.c})>0){sign='+'}else{sign='-'}} //se 0 sposto il cursore di uno e rifaccio
+
+          while(c.c <= b){ //se il valore dopo ha segno opposto a quello prima non è unico
+            if(math.eval(dh, {'x': c.c}) > 0 && sign == '-' || math.eval(dh, {'x': c.c}) < 0 && sign == '+'){
+              return false
+            }
+            else{ //se il valore ha segno uguale si va avanti
+              c.next()
+            }
+          }
+          return true
+        }
+        //approssimazione dello zero
+        function approximation(p, eq){
+          let x = p //il primo valore di x è uguale al punto trovato dag1small, dove la derivata è più bassa
+          for (var i = 210; i >= 1; i--) {
+            x = math.eval(eq, {'x': x}) //ricalcolare x con il valore trovato precedentemente
+            console.log(x)
+          }
+          $("#res").append(x)
+          return x
+        }
+        //trovare il punto con derivata minore
+        function g1small(eq){
+          let c = new Cursor(a)
+          let p = Infinity; let pb = Infinity; let d = Infinity
+          while(c.c <= b){
+            p = Math.abs(math.eval(eq, {'x':c.c})) //calcolare il valore della derivata di gx nel punto
+            if(p<pb) pb=p; d=c.c //se è meno del punto precedente lo memorizzo
+            c.next()
+          }
+          return d
+        }
+        //funzione richiamata per calcolare i punti del grafico
+        function chartPoints(equation){
+          let points = [['x', equation]] //setta gli assi a x, f(x)
+          let c = new Cursor(a)
+          while(c.c <= b) { 
+            let y = Math.round(math.eval(equation, {'x': c.c})*1000)/1000 //calcolare la fx nel punto del cursore
+            if(Math.abs(y) < 25) //per evitare un grafico troppo piccolo viene limitato a 25
+              points.push([c.c, y]) //e il punto viene messo nel vettore
+            c.next()
+          }
+          return points
+        }
+      }
+    });
+  });
+</script>
+</html>
